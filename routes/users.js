@@ -5,13 +5,13 @@ const passport = require('passport')
 
 const User = require("../models/User")
 
-router.get('/login', (req, res) => {
-    res.render('login')
-})
+// router.get('/login', (req, res) => {
+//     res.render('login')
+// })
 
-router.get('/register', (req, res) => {
-    res.render('register')
-})
+// router.get('/register', (req, res) => {
+//     res.render('register')
+// })
 
 router.post('/register', (req, res) => {
     const { name, email, password, password2 } = req.body;
@@ -31,26 +31,14 @@ router.post('/register', (req, res) => {
     }
 
     if (errors.length > 0) {
-        res.render('register', {
-            errors,
-            name,
-            email,
-            password,
-            password2
-        })
+        res.status(400).json({ errors })
     } else {
         //validation Passes
         User.findOne( {email: email} )
         .then( (user) => {
             if (user) {
                 errors.push( { msg: "Email is already registered" })
-                res.render('register', {
-                    errors,
-                    name,
-                    email,
-                    password,
-                    password2
-                })
+                res.status(400).json({ errors })
             } else {
                 const newUser = new User({
                     name,
@@ -62,16 +50,17 @@ router.post('/register', (req, res) => {
                 bcrypt.genSalt(8, (error, salt) => {
                     bcrypt.hash(newUser.password, salt, (error, hash) => {
                         if(error) {
-                            throw new error;
+                            errors.push( { msg: "Password hashing issue" })
+                            res.status(400).json({ errors })
                         }
                         newUser.password = hash
                         newUser.save()
                         .then(user => {
-                            req.flash(
-                                'success_msg',
-                                'You are now registered and can log in'
-                            );
-                            res.redirect('/users/login');
+                            res.status(201).json({
+                                msg: "You are now registered and can log in",
+                                user
+                            })
+                            // res.redirect('/users/login');
                         })
                         .catch(err => console.log(err))
                     })
@@ -92,7 +81,9 @@ router.post('/login', (req, res, next) => {
 router.get('/logout', (req, res) => {
     req.logout();
     req.flash('success_msg', 'Logged out successfully')
-    res.redirect('/users/login')
+    res.status(200).json({
+        msg: "logged out successfully"
+    })
 }) 
 
 module.exports = router
